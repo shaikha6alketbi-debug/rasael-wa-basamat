@@ -303,6 +303,17 @@ textarea{width:100%;min-height:150px;font:inherit;line-height:1.9;padding:12px 1
   .map-legend{font-size:.7rem}
 }
 @media (min-width:821px){.panel.collapsible>.body{display:block!important}}
+
+/* compact markers on phones so the Al Ain map stays tappable */
+@media (max-width:820px){
+  .pin{width:28px;height:35px}
+  .pin>svg:first-child{width:28px;height:35px}
+  .pin .sym{width:13px;height:13px;top:6px}
+  .cluster{min-width:32px;height:32px;font-size:.78rem;border-width:2px;line-height:1}
+  .cluster small{display:none}
+  .place{font-size:.7rem;padding:0 4px}
+  .map-badge,.map-legend{font-size:.68rem}
+}
 </style>
 <script src="config.js"></script>
 </head>
