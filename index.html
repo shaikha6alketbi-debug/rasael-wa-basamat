@@ -217,7 +217,8 @@ textarea{width:100%;min-height:150px;font:inherit;line-height:1.9;padding:12px 1
 .m-form textarea{line-height:1.9;resize:vertical}
 .m-form .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .m-form .f-meta{display:flex;justify-content:space-between;gap:10px;font-size:.82rem;color:var(--muted);flex-wrap:wrap}
-.f-status{font-size:.9rem;font-weight:700;color:var(--green)}
+.f-status{font-size:.95rem;font-weight:700;color:var(--green);flex-basis:100%;background:rgba(49,91,64,.08);border-radius:8px;padding:6px 10px}
+.f-status:empty{display:none}
 .f-status.err{color:var(--primary)}
 @media (max-width:560px){.m-form .f2{grid-template-columns:1fr}}
 .admin{background:var(--card);border:1px solid var(--gold);border-radius:var(--radius);padding:16px;overflow:auto}
@@ -589,7 +590,7 @@ textarea{width:100%;min-height:150px;font:inherit;line-height:1.9;padding:12px 1
       <div class="f-meta"><span id="f-count">0 كلمة</span><span id="f-hint">تبدأ بالمقدمة الموحدة، والطول 30–50 كلمة.</span></div>
       <div class="actions" style="margin-top:8px">
         <button class="btn" id="f-save" type="submit">حفظ الرسالة</button>
-        <span class="f-status" id="f-status" aria-live="polite"></span>
+        <span class="f-status" id="fm-status" aria-live="polite" role="status"></span>
       </div>
     </form>
     <div class="actions">
@@ -735,7 +736,7 @@ function renderFilters(){
   const regionItems=REGIONS.map(r=>({key:r.id,label:r.nameAr,count:br.filter(d=>d.regionId===r.id).length}));
   regionItems.push({key:"none",label:"المنطقة قيد التحقق",count:br.filter(d=>!d.regionId).length});
   buildRows($("#f-region"), regionItems.filter(i=>i.count||state.region.has(i.key)), state.region, ()=>"pin-place");
-  buildRows($("#f-status"), Object.keys(STATUS_FILTERS).map(k=>({key:k,label:STATUS_FILTERS[k].label,count:bs.filter(STATUS_FILTERS[k].test).length})), state.status, ()=>"check");
+  buildRows($("#fm-status"), Object.keys(STATUS_FILTERS).map(k=>({key:k,label:STATUS_FILTERS[k].label,count:bs.filter(STATUS_FILTERS[k].test).length})), state.status, ()=>"check");
 }
 function renderChips(){
   const chips=[];
@@ -915,18 +916,18 @@ function fillForm(d, saved, draft){
   const src=draft&&(!saved||String(draft.updatedAt)>String(saved.savedAt))?draft:saved;
   $("#f-name").value=src?.name||""; $("#f-role").value=src?.role||"مدير/ة المدرسة"; $("#f-phone").value=src?.phone||""; $("#f-email").value=src?.email||"";
   $("#f-msg").value=src?.message||(PREFIX+"، "); updateCount(); lastAuto=JSON.stringify(formState());
-  const st=$("#f-status"); st.className="f-status";
+  const st=$("#fm-status"); st.className="f-status";
   st.textContent = src===draft&&draft ? `مسودة محفوظة تلقائيًا — ${fmtDate(draft.updatedAt)}${saved?` (آخر حفظ نهائي: الإصدار ${saved.version||1})`:""}` : saved ? `محفوظة ✓ — الإصدار ${saved.version||1} — ${fmtDate(saved.savedAt)}` : "";
 }
 function updateCount(){ const c=checkMessage($("#f-msg").value); $("#f-count").textContent=`${c.n} كلمة`; $("#f-count").style.color=c.ok?"var(--green)":(c.n>50||(!c.prefix&&!c.empty)?"var(--primary)":"var(--muted)"); }
 /* ---- autosave: 1.5 s after the last keystroke, only when something changed ---- */
 let autoT=null, lastAuto="";
 function scheduleAutosave(){ clearTimeout(autoT); autoT=setTimeout(async()=>{ const d=current_; if(!d) return; const fs=formState(); const sig=JSON.stringify(fs); if(sig===lastAuto) return; lastAuto=sig;
-  const draft={...fs, schoolId:d.id, schoolName:d.nameAr, updatedAt:new Date().toISOString()}; const st=$("#f-status"); st.className="f-status"; st.textContent="جارٍ الحفظ التلقائي…";
+  const draft={...fs, schoolId:d.id, schoolName:d.nameAr, updatedAt:new Date().toISOString()}; const st=$("#fm-status"); st.className="f-status"; st.textContent="جارٍ الحفظ التلقائي…";
   try{ const where=await store.saveDraft(d.id,draft); if(current_===d) st.textContent=`حُفظت المسودة تلقائيًا ✓ ${fmtTime(draft.updatedAt)}${where==="local"?" (على هذا الجهاز)":""}`; }catch{ if(current_===d) st.textContent=`حُفظت المسودة على هذا الجهاز ✓ ${fmtTime(draft.updatedAt)}`; } },1500); }
 ["#f-name","#f-role","#f-phone","#f-email","#f-msg"].forEach(sel=>{ $(sel).addEventListener("input",()=>{ if(sel==="#f-msg") updateCount(); scheduleAutosave(); }); $(sel).addEventListener("change",scheduleAutosave); });
 $("#m-form").addEventListener("submit",async()=>{
-  const d=current_; if(!d) return; clearTimeout(autoT); const st=$("#f-status"); const fs=formState(); const msg=fs.message.trim().replace(/\.\.\./g,"…");
+  const d=current_; if(!d) return; clearTimeout(autoT); const st=$("#fm-status"); const fs=formState(); const msg=fs.message.trim().replace(/\.\.\./g,"…");
   const c=checkMessage(msg);
   if(!fs.name){ st.className="f-status err"; st.textContent="اكتب اسم المشارك/ة."; $("#f-name").focus(); return; }
   if(!c.prefix){ st.className="f-status err"; st.textContent="يجب أن تبدأ الرسالة بالمقدمة الموحدة."; $("#f-msg").focus(); return; }
@@ -979,6 +980,8 @@ $("#clear-draft").addEventListener("click",()=>{ draft.value=PREFIX+"، "; rende
 
 /* ===================== reveal + misc ===================== */
 const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target);} }),{threshold:0,rootMargin:"0px 0px -8% 0px"});
+function revealSafety(){ document.querySelectorAll(".reveal:not(.in)").forEach(el=>el.classList.add("in")); }
+setTimeout(revealSafety,2500); window.addEventListener("load",()=>setTimeout(revealSafety,800));
 function observeReveals(){ document.querySelectorAll(".reveal:not(.in)").forEach(el=>io.observe(el)); }
 const mb=$(".menu-btn"); mb.addEventListener("click",()=>{ const o=$("#nav").classList.toggle("open"); mb.setAttribute("aria-expanded",String(o)); });
 $("#nav").addEventListener("click",e=>{ if(e.target.tagName==="A"&&$("#nav").classList.contains("open")){ $("#nav").classList.remove("open"); mb.setAttribute("aria-expanded","false"); } });
